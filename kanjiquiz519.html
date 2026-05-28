@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kanji Quiz - 0519</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Hiragino Sans', 'Noto Sans JP', sans-serif;
+    background: #1a1a2e;
+    color: #e0e0e0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .quiz-container {
+    background: #16213e;
+    border-radius: 16px;
+    padding: 40px;
+    max-width: 500px;
+    width: 100%;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+  }
+  h1 {
+    text-align: center;
+    font-size: 1.4em;
+    margin-bottom: 8px;
+    color: #e94560;
+  }
+  .progress {
+    text-align: center;
+    font-size: 0.85em;
+    color: #888;
+    margin-bottom: 24px;
+  }
+  .kanji-word {
+    text-align: center;
+    font-size: 3em;
+    margin: 20px 0;
+    color: #fff;
+  }
+  .choices {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin: 24px 0;
+  }
+  .choice-btn {
+    background: #0f3460;
+    border: 2px solid #0f3460;
+    color: #e0e0e0;
+    padding: 14px 20px;
+    border-radius: 10px;
+    font-size: 1.3em;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: left;
+  }
+  .choice-btn:hover:not(:disabled) {
+    background: #1a4a7a;
+    border-color: #e94560;
+  }
+  .choice-btn.correct {
+    background: #2d6a4f;
+    border-color: #52b788;
+    color: #fff;
+  }
+  .choice-btn.wrong {
+    background: #6a2d2d;
+    border-color: #e94560;
+    color: #fff;
+  }
+  .result-box {
+    text-align: center;
+    padding: 16px;
+    border-radius: 10px;
+    margin: 16px 0;
+    display: none;
+  }
+  .result-box.show { display: block; }
+  .result-box.correct { background: #2d6a4f; }
+  .result-box.wrong { background: #6a2d2d; }
+  .result-box .meaning {
+    font-size: 1.1em;
+    margin-top: 8px;
+    color: #ccc;
+  }
+  .next-btn {
+    display: none;
+    width: 100%;
+    background: #e94560;
+    border: none;
+    color: #fff;
+    padding: 14px;
+    border-radius: 10px;
+    font-size: 1.1em;
+    cursor: pointer;
+    margin-top: 12px;
+  }
+  .next-btn:hover { background: #c73652; }
+  .next-btn.show { display: block; }
+  .score-screen {
+    text-align: center;
+  }
+  .score-screen .score {
+    font-size: 3em;
+    color: #e94560;
+    margin: 20px 0;
+  }
+  .restart-btn {
+    background: #e94560;
+    border: none;
+    color: #fff;
+    padding: 14px 40px;
+    border-radius: 10px;
+    font-size: 1.1em;
+    cursor: pointer;
+    margin-top: 20px;
+  }
+  .restart-btn:hover { background: #c73652; }
+</style>
+</head>
+<body>
+<div class="quiz-container" id="quiz">
+  <h1>漢字クイズ</h1>
+  <div class="progress" id="progress">1 / 15</div>
+  <div class="kanji-word" id="word"></div>
+  <div class="choices" id="choices"></div>
+  <div class="result-box" id="result">
+    <div id="resultText"></div>
+    <div class="meaning" id="meaning"></div>
+  </div>
+  <button class="next-btn" id="nextBtn" onclick="nextQuestion()">次へ →</button>
+</div>
+
+<script>
+const words = [
+  { kanji: "湿る", reading: "しめる", meaning: "become damp" },
+  { kanji: "湿っぽい", reading: "しめっぽい", meaning: "damp" },
+  { kanji: "湿度", reading: "しつど", meaning: "level of humidity" },
+  { kanji: "湿度計", reading: "しつどけい", meaning: "hygrometer" },
+  { kanji: "湿気", reading: "しっけ", meaning: "moisture" },
+  { kanji: "測る", reading: "はかる", meaning: "measure" },
+  { kanji: "予測", reading: "よそく", meaning: "prediction" },
+  { kanji: "測定", reading: "そくてい", meaning: "measurement" },
+  { kanji: "観測", reading: "かんそく", meaning: "observation" },
+  { kanji: "測量", reading: "そくりょう", meaning: "measurement" },
+  { kanji: "滑る", reading: "すべる", meaning: "be slippery" },
+  { kanji: "口が滑る", reading: "くちがすべる", meaning: "slip of the tongue" },
+  { kanji: "口を滑らす", reading: "くちをすべらす", meaning: "make a slip of the tongue" },
+  { kanji: "滑らか", reading: "なめらか", meaning: "smooth" },
+  { kanji: "円滑", reading: "えんかつ", meaning: "smooth" }
+];
+
+let currentIndex = 0;
+let score = 0;
+let shuffled = [];
+
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function startQuiz() {
+  shuffled = shuffle([...words]);
+  currentIndex = 0;
+  score = 0;
+  document.getElementById('quiz').style.display = '';
+  document.getElementById('quiz').innerHTML = `
+    <h1>漢字クイズ</h1>
+    <div class="progress" id="progress">1 / ${shuffled.length}</div>
+    <div class="kanji-word" id="word"></div>
+    <div class="choices" id="choices"></div>
+    <div class="result-box" id="result">
+      <div id="resultText"></div>
+      <div class="meaning" id="meaning"></div>
+    </div>
+    <button class="next-btn" id="nextBtn" onclick="nextQuestion()">次へ →</button>
+  `;
+  showQuestion();
+}
+
+function showQuestion() {
+  const q = shuffled[currentIndex];
+  document.getElementById('progress').textContent = `${currentIndex + 1} / ${shuffled.length}`;
+  document.getElementById('word').textContent = q.kanji;
+  document.getElementById('result').className = 'result-box';
+  document.getElementById('result').classList.remove('show');
+  document.getElementById('nextBtn').classList.remove('show');
+
+  // Build 4 choices: correct + 3 random wrong answers
+  const wrong = words
+    .filter(w => w.reading !== q.reading)
+    .map(w => w.reading);
+  const choices = shuffle([q.reading, ...wrong.slice(0, 3)]);
+
+  const choicesEl = document.getElementById('choices');
+  choicesEl.innerHTML = '';
+  choices.forEach(c => {
+    const btn = document.createElement('button');
+    btn.className = 'choice-btn';
+    btn.textContent = c;
+    btn.onclick = () => checkAnswer(btn, c, q);
+    choicesEl.appendChild(btn);
+  });
+}
+
+function checkAnswer(btn, chosen, q) {
+  const buttons = document.querySelectorAll('.choice-btn');
+  buttons.forEach(b => b.disabled = true);
+
+  const isCorrect = chosen === q.reading;
+  if (isCorrect) {
+    score++;
+    btn.classList.add('correct');
+  } else {
+    btn.classList.add('wrong');
+    buttons.forEach(b => {
+      if (b.textContent === q.reading) b.classList.add('correct');
+    });
+  }
+
+  const resultBox = document.getElementById('result');
+  resultBox.classList.add('show');
+  resultBox.classList.add(isCorrect ? 'correct' : 'wrong');
+  document.getElementById('resultText').textContent = isCorrect ? '✓ 正解！' : '✗ 不正解';
+  document.getElementById('meaning').textContent = `${q.kanji} = ${q.meaning}`;
+  document.getElementById('nextBtn').classList.add('show');
+}
+
+function nextQuestion() {
+  currentIndex++;
+  if (currentIndex < shuffled.length) {
+    showQuestion();
+  } else {
+    showScore();
+  }
+}
+
+function showScore() {
+  document.getElementById('quiz').innerHTML = `
+    <div class="score-screen">
+      <h1>結果</h1>
+      <div class="score">${score} / ${shuffled.length}</div>
+      <p>${score === shuffled.length ? '完璧です！' : score >= shuffled.length * 0.7 ? 'よくできました！' : 'もう一度挑戦しよう！'}</p>
+      <button class="restart-btn" onclick="startQuiz()">もう一度</button>
+    </div>
+  `;
+}
+
+startQuiz();
+</script>
+</body>
+</html>
