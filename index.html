@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buggy Productions</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            padding: 2rem;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .subtitle {
+            color: #64748b;
+            margin-bottom: 2rem;
+        }
+        .status-card {
+            background: #1e293b;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            border: 1px solid #334155;
+        }
+        .status-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        .status-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+        .status-badge {
+            background: #10b981;
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 999px;
+            font-size: 0.875rem;
+        }
+        .status-badge.warning {
+            background: #f59e0b;
+        }
+        .status-badge.error {
+            background: #ef4444;
+        }
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #334155;
+        }
+        .status-item:last-child {
+            border-bottom: none;
+        }
+        .status-label {
+            color: #94a3b8;
+        }
+        .status-value {
+            font-weight: 500;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 3rem;
+            color: #64748b;
+            font-size: 0.875rem;
+        }
+        .last-updated {
+            color: #64748b;
+            font-size: 0.875rem;
+            margin-top: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Buggy Productions</h1>
+        <p class="subtitle">Hermes Instance Status Dashboard</p>
+
+        <div class="status-card">
+            <div class="status-header">
+                <span class="status-title">System Status</span>
+                <span class="status-badge">● Online</span>
+            </div>
+            <div class="status-grid">
+                <div class="status-item">
+                    <span class="status-label">Model</span>
+                    <span class="status-value">qwen/qwen3.6-27b</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Provider</span>
+                    <span class="status-value">LM Studio (Local)</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Personality</span>
+                    <span class="status-value">Ruri Hoshino</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Platforms</span>
+                    <span class="status-value">Telegram</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="status-card">
+            <div class="status-header">
+                <span class="status-title">Classroom Sync</span>
+                <span class="status-badge">Active</span>
+            </div>
+            <div class="status-grid">
+                <div class="status-item">
+                    <span class="status-label">Spring 2026</span>
+                    <span class="status-value">15 items</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Fall 2025</span>
+                    <span class="status-value">28 items</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Total Files</span>
+                    <span class="status-value">91</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Storage Used</span>
+                    <span class="status-value">277M</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="status-card">
+            <div class="status-header">
+                <span class="status-title">Backup Status</span>
+                <span class="status-badge">Daily @ 3AM</span>
+            </div>
+            <div class="status-grid">
+                <div class="status-item">
+                    <span class="status-label">Retention</span>
+                    <span class="status-value">Last 10 backups</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Docs Refresh</span>
+                    <span class="status-value">Weekly @ 4AM</span>
+                </div>
+            </div>
+        </div>
+
+        <p class="last-updated">Last updated: <span id="lastUpdated"></span></p>
+
+        <div class="footer">
+            <p>Managed by Hermes Agent • Powered by Ruri Hoshino</p>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('lastUpdated').textContent = new Date().toLocaleString();
+    </script>
+</body>
+</html>
