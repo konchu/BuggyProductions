@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>日本語クイズ - 第6回 5/26</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Hiragino Sans', 'Noto Sans JP', sans-serif;
+    background: #1a1a2e;
+    color: #e0e0e0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .quiz-container {
+    background: #16213e;
+    border-radius: 16px;
+    padding: 40px;
+    max-width: 500px;
+    width: 100%;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+  }
+  h1 {
+    text-align: center;
+    font-size: 1.4em;
+    margin-bottom: 4px;
+    color: #e94560;
+  }
+  .subtitle {
+    text-align: center;
+    font-size: 0.8em;
+    color: #888;
+    margin-bottom: 16px;
+  }
+  .progress {
+    text-align: center;
+    font-size: 0.85em;
+    color: #888;
+    margin-bottom: 24px;
+  }
+  .question-type {
+    text-align: center;
+    font-size: 0.75em;
+    color: #e94560;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .kanji-word {
+    text-align: center;
+    font-size: 2.5em;
+    margin: 20px 0;
+    color: #fff;
+    line-height: 1.3;
+  }
+  .question-text {
+    text-align: center;
+    font-size: 1.1em;
+    margin: 16px 0;
+    color: #ccc;
+    line-height: 1.5;
+  }
+  .choices {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin: 24px 0;
+  }
+  .choice-btn {
+    background: #0f3460;
+    border: 2px solid #0f3460;
+    color: #e0e0e0;
+    padding: 14px 20px;
+    border-radius: 10px;
+    font-size: 1.1em;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: left;
+    line-height: 1.4;
+  }
+  .choice-btn:hover:not(:disabled) {
+    background: #1a4a7a;
+    border-color: #e94560;
+  }
+  .choice-btn.correct {
+    background: #2d6a4f;
+    border-color: #52b788;
+    color: #fff;
+  }
+  .choice-btn.wrong {
+    background: #6a2d2d;
+    border-color: #e94560;
+    color: #fff;
+  }
+  .result-box {
+    text-align: center;
+    padding: 16px;
+    border-radius: 10px;
+    margin: 16px 0;
+    display: none;
+  }
+  .result-box.show { display: block; }
+  .result-box.correct { background: #2d6a4f; }
+  .result-box.wrong { background: #6a2d2d; }
+  .result-box .explanation {
+    font-size: 0.95em;
+    margin-top: 8px;
+    color: #ccc;
+    line-height: 1.4;
+  }
+  .next-btn {
+    display: none;
+    width: 100%;
+    background: #e94560;
+    border: none;
+    color: #fff;
+    padding: 14px;
+    border-radius: 10px;
+    font-size: 1.1em;
+    cursor: pointer;
+    margin-top: 12px;
+  }
+  .next-btn:hover { background: #c73652; }
+  .next-btn.show { display: block; }
+  .score-screen { text-align: center; }
+  .score-screen .score {
+    font-size: 3em;
+    color: #e94560;
+    margin: 20px 0;
+  }
+  .score-screen .message {
+    font-size: 1.1em;
+    margin-bottom: 8px;
+  }
+  .review-list {
+    text-align: left;
+    margin: 16px 0;
+    font-size: 0.85em;
+    color: #aaa;
+    line-height: 1.6;
+  }
+  .review-list .missed { color: #e94560; }
+  .restart-btn {
+    background: #e94560;
+    border: none;
+    color: #fff;
+    padding: 14px 40px;
+    border-radius: 10px;
+    font-size: 1.1em;
+    cursor: pointer;
+    margin-top: 20px;
+  }
+  .restart-btn:hover { background: #c73652; }
+</style>
+</head>
+<body>
+<div class="quiz-container" id="quiz"></div>
+
+<script>
+// Quiz data from Week 6 materials (5/26)
+// Covers: 性格をあらわす言葉, grammar P.46/P.53/P.54, kanji 生命の源は海かな
+const questions = [
+  // --- 性格をあらわす言葉 (Personality vocabulary) ---
+  {
+    type: "性格の言葉",
+    question: "「おっちょこちょい」是什么意思？",
+    choices: ["马虎、冒失", "温柔、体贴", "认真、仔细", "开朗、活泼"],
+    correct: 0,
+    explanation: "おっちょこちょい = 马虎、冒失。第6回上课的话题词。"
+  },
+  {
+    type: "性格の言葉",
+    question: "下列哪个词表示"开朗、不拘小节"的意思？",
+    choices: ["几帳面", "おおらか", "小心", "おっちょこちょい"],
+    correct: 1,
+    explanation: "おおらか = 开朗、豁达、不拘小节。"
+  },
+  {
+    type: "性格の言葉",
+    question: "「やさしい」除了"温柔"之外，还有什么意思？",
+    choices: ["严格", "简单", "危险", "困难"],
+    correct: 1,
+    explanation: "やさしい 既可以表示"温柔"，也可以表示"简单"。"
+  },
+  {
+    type: "性格の言葉",
+    question: "「几帳面（きちょうめん）」是什么意思？",
+    choices: ["马虎", "懒惰", "认真、有条理", "开朗"],
+    correct: 2,
+    explanation: "几帳面 = 做事认真、有条理、一丝不苟。"
+  },
+  // --- 文法 (Grammar P.46, P.53) ---
+  {
+    type: "文法",
+    question: "「XXさんっておもしろい人なんですよ」中的「んですよ」的作用是什么？",
+    choices: ["表示疑问", "强调说明、解释", "表示过去", "表示命令"],
+    correct: 1,
+    explanation: "んですよ/んですよ 用于强调说明或解释，P.53 的对话练习。"
+  },
+  {
+    type: "文法",
+    question: "「どんな人なんですか？」这里的「どんな」是什么意思？",
+    choices: ["哪个", "什么样的", "多少", "哪里"],
+    correct: 1,
+    explanation: "どんな = 什么样的。用于询问特征或性质。"
+  },
+  {
+    type: "文法",
+    question: "「わかりやすかった」是「わかりやすい」的什么时态？",
+    choices: ["将来时", "进行时", "过去时", "否定"],
+    correct: 2,
+    explanation: "わかりやすかった = 易懂（过去时）。P.53 听者反馈用语。"
+  },
+  // --- 漢字・語彙 (Kanji/vocabulary from 生命の源は海かな) ---
+  {
+    type: "漢字",
+    question: "「生命の源（みなもと）」中的「源」是什么意思？",
+    choices: ["终点", "源头、起源", "中心", "表面"],
+    correct: 1,
+    explanation: "源（みなもと）= 源头、起源。5/26 漢字プリント的主题。"
+  },
+  {
+    type: "漢字",
+    question: "「生命」的正确读音是什么？",
+    choices: ["せいえい", "せいめい", "せいめい", "せいの"],
+    correct: 1,
+    explanation: "生命（せいめい）= life。"
+  },
+  {
+    type: "漢字",
+    question: "「海は生命の源だ」这句话最准确的翻译是？",
+    choices: ["海是生命的敌人", "海是生命的源头", "海在生命旁边", "海比生命重要"],
+    correct: 1,
+    explanation: "海（うみ）は生命（せいめい）の源（みなもと）だ = 海是生命的源头。"
+  },
+  // --- 読解・会話 (Reading/Conversation from slides) ---
+  {
+    type: "読解",
+    question: "「インタビュー記事を読んで、その人がどんな人か理解できる」是什么意思？",
+    choices: [
+      "能写采访文章",
+      "能读懂采访文章并理解那个人是什么样的",
+      "能采访别人",
+      "能编辑采访视频"
+    ],
+    correct: 1,
+    explanation: "P.54 的学习目标：阅读采访文章，理解人物的性格特点。"
+  },
+  {
+    type: "会話",
+    question: "「2分間会話キャッチボール」中的「キャッチボール」比喻什么？",
+    choices: ["打棒球", "你一言我一语的对话", "跑步比赛", "做实验"],
+    correct: 1,
+    explanation: "会話キャッチボール = 像接球一样你一句我一句地轮流对话。"
+  },
+  {
+    type: "プレゼン",
+    question: "6/16 & 6/23 的发表主题有两个，下列哪个不是？",
+    choices: [
+      "わたしの尊敬する人",
+      "わたしの性格",
+      "わたしの好きな食べ物",
+      "以上两个都是正式主题"
+    ],
+    correct: 2,
+    explanation: "主题是「わたしの尊敬する人」和「わたしの性格」两个。"
+  },
+  {
+    type: "性格の言葉",
+    question: "「小心（しょうじん）」是什么意思？",
+    choices: ["勇敢", "小心谨慎", "马虎", "大方"],
+    correct: 1,
+    explanation: "小心（しょうじん）= 小心谨慎、细致。性格相关的词汇。"
+  },
+  {
+    type: "漢字",
+    question: "「エピソード」在日语中是什么意思？",
+    choices: ["电视节目", "小故事、轶事", "电影", "新闻报道"],
+    correct: 1,
+    explanation: "エピソード = 小故事、轶事。发表时要讲与性格相关的エピソード。"
+  }
+];
+
+let currentIndex = 0;
+let score = 0;
+let shuffled = [];
+let wrongAnswers = [];
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function startQuiz() {
+  shuffled = shuffle(questions.map((q, i) => ({...q, _idx: i})));
+  currentIndex = 0;
+  score = 0;
+  wrongAnswers = [];
+  showQuestion();
+}
+
+function showQuestion() {
+  const q = shuffled[currentIndex];
+  const quiz = document.getElementById('quiz');
+  quiz.innerHTML = `
+    <h1>日本語クイズ</h1>
+    <div class="subtitle">第6回 5/26 復習</div>
+    <div class="progress">${currentIndex + 1} / ${shuffled.length}</div>
+    <div class="question-type">${q.type}</div>
+    <div class="question-text">${q.question}</div>
+    <div class="choices" id="choices"></div>
+    <div class="result-box" id="result">
+      <div id="resultText"></div>
+      <div class="explanation" id="explanation"></div>
+    </div>
+    <button class="next-btn" id="nextBtn" onclick="nextQuestion()">
+      ${currentIndex < shuffled.length - 1 ? '次へ →' : '結果を見る →'}
+    </button>
+  `;
+
+  // Shuffle choice order but track correct answer
+  const choiceIndices = q.choices.map((_, i) => i);
+  const shuffledIndices = shuffle(choiceIndices);
+
+  const choicesEl = document.getElementById('choices');
+  shuffledIndices.forEach(ci => {
+    const btn = document.createElement('button');
+    btn.className = 'choice-btn';
+    btn.textContent = q.choices[ci];
+    btn.dataset.index = ci;
+    btn.onclick = () => checkAnswer(btn, ci, q);
+    choicesEl.appendChild(btn);
+  });
+}
+
+function checkAnswer(btn, chosenIdx, q) {
+  const buttons = document.querySelectorAll('.choice-btn');
+  buttons.forEach(b => b.disabled = true);
+
+  const isCorrect = chosenIdx === q.correct;
+  if (isCorrect) {
+    score++;
+    btn.classList.add('correct');
+  } else {
+    btn.classList.add('wrong');
+    buttons.forEach(b => {
+      if (parseInt(b.dataset.index) === q.correct) b.classList.add('correct');
+    });
+    wrongAnswers.push({
+      question: q.question,
+      yourAnswer: q.choices[chosenIdx],
+      correctAnswer: q.choices[q.correct],
+      explanation: q.explanation
+    });
+  }
+
+  const resultBox = document.getElementById('result');
+  resultBox.classList.add('show');
+  resultBox.classList.add(isCorrect ? 'correct' : 'wrong');
+  document.getElementById('resultText').textContent = isCorrect ? '✓ 正解！' : '✗ 不正解';
+  document.getElementById('explanation').textContent = q.explanation;
+  document.getElementById('nextBtn').classList.add('show');
+}
+
+function nextQuestion() {
+  currentIndex++;
+  if (currentIndex < shuffled.length) {
+    showQuestion();
+  } else {
+    showScore();
+  }
+}
+
+function showScore() {
+  const quiz = document.getElementById('quiz');
+  const pct = Math.round((score / shuffled.length) * 100);
+  let message = '';
+  if (pct === 100) message = '完璧です！素晴らしい！';
+  else if (pct >= 80) message = 'よくできました！';
+  else if (pct >= 60) message = 'もう少し練習しよう！';
+  else message = '復習してからもう一度！';
+
+  let reviewHTML = '';
+  if (wrongAnswers.length > 0) {
+    reviewHTML = `<div class="review-list"><strong>間違えた問題：</strong><br>`;
+    wrongAnswers.forEach(w => {
+      reviewHTML += `<span class="missed">・${w.question}</span><br>`;
+      reviewHTML += `&nbsp;&nbsp;正解: ${w.correctAnswer}<br>`;
+      reviewHTML += `&nbsp;&nbsp;${w.explanation}<br>`;
+    });
+    reviewHTML += `</div>`;
+  }
+
+  quiz.innerHTML = `
+    <div class="score-screen">
+      <h1>結果</h1>
+      <div class="score">${score} / ${shuffled.length}</div>
+      <div class="message">${message}</div>
+      ${reviewHTML}
+      <button class="restart-btn" onclick="startQuiz()">もう一度</button>
+    </div>
+  `;
+}
+
+startQuiz();
+</script>
+</body>
+</html>

@@ -7,7 +7,7 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            background: #000;
+            background: #1a1a2e;
             color: #fff;
             min-height: 100vh;
             display: flex;
@@ -18,24 +18,69 @@
         .container {
             text-align: center;
             padding: 2rem;
+            max-width: 480px;
         }
         .logo {
-            width: 180px;
+            width: 140px;
             height: auto;
+            margin-bottom: 1.5rem;
+        }
+        h1 {
+            font-size: 1.3rem;
+            margin-bottom: 0.3rem;
+            color: #e94560;
+        }
+        .subtitle {
+            color: #888;
+            font-size: 0.85rem;
             margin-bottom: 2rem;
         }
-        .coming-soon {
+        .quiz-link {
+            display: inline-block;
+            background: #e94560;
+            color: #fff;
+            text-decoration: none;
+            padding: 14px 32px;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+            transition: background 0.2s;
+        }
+        .quiz-link:hover { background: #c73652; }
+        .quiz-list {
+            margin-top: 1.5rem;
+            text-align: left;
+        }
+        .quiz-list a {
+            display: block;
+            color: #aaa;
+            text-decoration: none;
+            padding: 8px 12px;
+            margin: 4px 0;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            transition: background 0.2s;
+        }
+        .quiz-list a:hover { background: #16213e; color: #fff; }
+        .quiz-list .label {
             color: #666;
-            font-size: 0.875rem;
-            letter-spacing: 0.15em;
+            font-size: 0.75rem;
             text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 8px;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <img src="logo.jpg" alt="Buggy Productions" class="logo">
-        <p class="coming-soon">Coming Soon</p>
+        <h1>日本語学習</h1>
+        <p class="subtitle">Advanced Japanese Class - Spring 2026</p>
+        <a href="quiz526.html" class="quiz-link">第6回 クイズ 5/26</a>
+        <div class="quiz-list">
+            <div class="label">Past Quizzes</div>
+            <a href="kanjiquiz519.html">第5回 漢字クイズ 5/19</a>
+        </div>
     </div>
 </body>
 </html>
