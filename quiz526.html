@@ -270,9 +270,11 @@ function showQuestion() {
       '<div class="reading" id="resultReading"></div>' +
       '<div class="meaning" id="resultMeaning"></div>' +
     '</div>' +
-    '<button class="next-btn" id="nextBtn" onclick="nextQuestion()">' +
-      (currentIndex < shuffled.length - 1 ? '\u6b21\u3078 \u2192' : '\u7d50\u679c\u3092\u898b\u308b \u2192') +
-    '</button>';
+  var nextBtn = document.createElement("button");
+  nextBtn.className = "next-btn";
+  nextBtn.textContent = currentIndex < shuffled.length - 1 ? "次へ →" : "結果を見る →";
+  nextBtn.onclick = nextQuestion;
+  quiz.appendChild(nextBtn);
 
   // Build choices: correct + 3 wrong, shuffled
   var choices = [q.reading].concat(q.wrong);
