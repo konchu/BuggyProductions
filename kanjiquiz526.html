@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Kanji Quiz - 0428</title>
+<title>Kanji Quiz - 0526</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
@@ -133,8 +133,8 @@
 <body>
 <div class="quiz-container" id="quiz">
   <h1>漢字クイズ</h1>
-  <div class="subtitle">漢字プリント 04/28 — 涙・液・添</div>
-  <div class="progress" id="progress">1 / 12</div>
+  <div class="subtitle">漢字プリント 05/26 — 源・溶・浴</div>
+  <div class="progress" id="progress">1 / 13</div>
   <div class="kanji-word" id="word"></div>
   <div class="choices" id="choices"></div>
   <div class="result-box" id="result">
@@ -146,18 +146,19 @@
 
 <script>
 const words = [
-  { kanji: "涙", reading: "なみだ", meaning: "tears" },
-  { kanji: "雀の涙", reading: "すずめのなみだ", meaning: "insignificant amount" },
-  { kanji: "液体", reading: "えきたい", meaning: "liquid" },
-  { kanji: "血液", reading: "けつえき", meaning: "blood" },
-  { kanji: "血液型", reading: "けつえきがた", meaning: "blood type" },
-  { kanji: "血液型占い", reading: "けつえきがたうらな", meaning: "blood type fortune telling" },
-  { kanji: "添える", reading: "そえる", meaning: "accompany" },
-  { kanji: "添う", reading: "そう", meaning: "comply with" },
-  { kanji: "付き添う", reading: "つきそう", meaning: "attend on" },
-  { kanji: "寄り添う", reading: "よりそう", meaning: "nestle close to" },
-  { kanji: "添付", reading: "てんぷ", meaning: "attaching" },
-  { kanji: "添加", reading: "てんか", meaning: "addition" }
+  { kanji: "資源", reading: "しげん", meaning: "resources" },
+  { kanji: "電源", reading: "でんげん", meaning: "electrical power" },
+  { kanji: "資源ごみ", reading: "しげんごみ", meaning: "recyclable waste" },
+  { kanji: "溶かす", reading: "とかす", meaning: "dissolve" },
+  { kanji: "溶け込む", reading: "とけこむ", meaning: "melt into" },
+  { kanji: "溶ける", reading: "とける", meaning: "melt" },
+  { kanji: "溶く", reading: "とく", meaning: "dissolve" },
+  { kanji: "溶岩", reading: "ようがん", meaning: "lava" },
+  { kanji: "浴びる", reading: "あびる", meaning: "bathe in" },
+  { kanji: "海水浴", reading: "かいすいよく", meaning: "swimming in the ocean" },
+  { kanji: "日光浴", reading: "にっこうよく", meaning: "sunbathing" },
+  { kanji: "浴場", reading: "ようじょう", meaning: "bathhouse" },
+  { kanji: "浴衣", reading: "ゆかた", meaning: "yukata" }
 ];
 
 let currentIndex = 0;
@@ -179,7 +180,7 @@ function startQuiz() {
   document.getElementById('quiz').style.display = '';
   document.getElementById('quiz').innerHTML = `
     <h1>漢字クイズ</h1>
-    <div class="subtitle">漢字プリント 04/28 — 涙・液・添</div>
+    <div class="subtitle">漢字プリント 05/26 — 源・溶・浴</div>
     <div class="progress" id="progress">1 / ${shuffled.length}</div>
     <div class="kanji-word" id="word"></div>
     <div class="choices" id="choices"></div>
@@ -200,7 +201,6 @@ function showQuestion() {
   document.getElementById('result').classList.remove('show');
   document.getElementById('nextBtn').classList.remove('show');
 
-  // Build 4 choices: correct + 3 random wrong answers
   const wrong = words
     .filter(w => w.reading !== q.reading)
     .map(w => w.reading);
