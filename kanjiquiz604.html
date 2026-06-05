@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>漢字クイズ - 常・識</title>
+<title>漢字クイズ - 演・漁・漫</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
@@ -67,48 +67,52 @@
 <div class="quiz-container" id="quiz"></div>
 <script>
 const questions = [
-  { type: '読みクイズ', question: '常', choices: ['つねに', 'つちに', 'じょうに', 'つねへ'], correct: 0, explanation: 'つねに — always' },
-  { type: '読みクイズ', question: '非常に', choices: ['ひじょうに', 'ひじょうへ', 'ひじょうで', 'ひじょうも'], correct: 0, explanation: 'ひじょうに — extremely' },
-  { type: '読みクイズ', question: '日常', choices: ['にちじょう', 'にちじょ', 'にちじょうへ', 'にちじょうで'], correct: 0, explanation: 'にちじょう — everyday' },
-  { type: '読みクイズ', question: '通常', choices: ['つうじょう', 'つうじょ', 'つうじょうへ', 'つうじょうで'], correct: 0, explanation: 'つうじょう — usually' },
-  { type: '読みクイズ', question: '正常', choices: ['せいじょう', 'せいじょ', 'せいじょうへ', 'せいじょうで'], correct: 0, explanation: 'せいじょう — normal' },
-  { type: '読みクイズ', question: '常識', choices: ['じょうしき', 'じょうしぎ', 'じょうしけ', 'じょうしぐ'], correct: 0, explanation: 'じょうしき — common sense' },
-  { type: '読みクイズ', question: '意識', choices: ['いしき', 'いしぎ', 'いしけ', 'いしぐ'], correct: 0, explanation: 'いしき — consciousness' },
-  { type: '読みクイズ', question: '知識', choices: ['ちしき', 'ちしぎ', 'ちしけ', 'ちしぐ'], correct: 0, explanation: 'ちしき — knowledge' },
-  { type: '読みクイズ', question: '標識', choices: ['ひょうしき', 'ひょうしぎ', 'ひょうしけ', 'ひょうしぐ'], correct: 0, explanation: 'ひょうしき — sign' },
-  { type: '読みクイズ', question: '面識', choices: ['めんしき', 'めんしぎ', 'めんしけ', 'めんしぐ'], correct: 0, explanation: 'めんしき — acquaintance' }
+  { type: '読みクイズ', question: '演じる', choices: ['えんじる', 'えんずる', 'えんじるう', 'おんじる'], correct: 0, explanation: 'えんじる — perform' },
+  { type: '読みクイズ', question: '演奏', choices: ['えんそう', 'えんぞう', 'えんそうる', 'おんそう'], correct: 0, explanation: 'えんそう — musical performance' },
+  { type: '読みクイズ', question: '演劇', choices: ['えんげき', 'えんぐき', 'えんけき', 'おんげき'], correct: 0, explanation: 'えんげき — drama' },
+  { type: '読みクイズ', question: '演技', choices: ['えんぎ', 'えんげ', 'えんき', 'おんぎ'], correct: 0, explanation: 'えんぎ — acting' },
+  { type: '読みクイズ', question: '演説', choices: ['えんせつ', 'えんぜつ', 'えんせち', 'おんせつ'], correct: 0, explanation: 'えんせつ — speech' },
+  { type: '読みクイズ', question: '講演', choices: ['こうえん', 'こうおん', 'こうえら', 'こうえんじ'], correct: 0, explanation: 'こうえん — lecture' },
+  { type: '読みクイズ', question: '演習', choices: ['えんしゅう', 'えんじゅう', 'えんしゅ', 'おんしゅう'], correct: 0, explanation: 'えんしゅう — practice' },
+  { type: '読みクイズ', question: '漁業', choices: ['ぎょぎょう', 'ぎょぎょ', 'ぎょうぎょう', 'りょうぎょう'], correct: 0, explanation: 'ぎょぎょう — fishing industry' },
+  { type: '読みクイズ', question: '漁村', choices: ['ぎょそん', 'ぎょむら', 'ぎょうそん', 'りょうそん'], correct: 0, explanation: 'ぎょそん — fishing village' },
+  { type: '読みクイズ', question: '漁船', choices: ['ぎょせん', 'ぎょふね', 'ぎょうせん', 'りょうせん'], correct: 0, explanation: 'ぎょせん — fishing boat' },
+  { type: '読みクイズ', question: '漁師', choices: ['りょうし', 'ぎょし', 'りょうさ', 'ぎょざ'], correct: 0, explanation: 'りょうし — fisherman' },
+  { type: '読みクイズ', question: '漫画', choices: ['まんが', 'まんく', 'まんか', 'ばんが'], correct: 0, explanation: 'まんが — manga (comic)' },
+  { type: '読みクイズ', question: '漫才', choices: ['まんざい', 'まんさい', 'まんずい', 'ばんざい'], correct: 0, explanation: 'まんざい — two-person comedy act' }
 ];
 
 let currentIndex = 0, score = 0, shuffled = [], wrongAnswers = [];
 
 function shuffle(arr) {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
+  var a = arr.slice();
+  for (var i = a.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var tmp = a[i]; a[i] = a[j]; a[j] = tmp;
   }
   return a;
 }
 
 function startQuiz() {
-  shuffled = shuffle(questions.map((q, i) => ({...q, _idx: i})));
+  shuffled = shuffle(questions.map(function(q, i) { return Object.assign({}, q, {_idx: i}); }));
   currentIndex = 0; score = 0; wrongAnswers = [];
   showQuestion();
 }
 
 function showQuestion() {
-  const q = shuffled[currentIndex];
+  var q = shuffled[currentIndex];
   document.getElementById('quiz').innerHTML =
     '<h1>漢字クイズ</h1>' +
-    '<div class="subtitle">常・識 — JLPT N3</div>' +
+    '<div class="subtitle">演・漁・漫 — JLPT N2</div>' +
     '<div class="progress">' + (currentIndex + 1) + ' / ' + shuffled.length + '</div>' +
     '<div class="question-type">' + q.type + '</div>' +
     '<div class="question-text">' + q.question + '</div>' +
     '<div class="choices" id="choices"></div>' +
     '<div class="result-box" id="result"><div class="reading" id="resultText"></div><div class="explanation" id="explanation"></div></div>' +
-    '<button class="next-btn" id="nextBtn" onclick="nextQuestion()">' + (currentIndex < shuffled.length - 1 ? '次へ →' : '結果を見る →') + '</button>';
-  const choiceIndices = q.choices.map(function(_, i) { return i; });
-  const shuffledIndices = shuffle(choiceIndices);
+    '<button class="next-btn" id="nextBtn" onclick="nextQuestion()">' + (currentIndex < shuffled.length - 1 ? '次へ \u2192' : '結果を見る \u2192') + '</button>';
+  var choiceIndices = [];
+  for (var k = 0; k < q.choices.length; k++) choiceIndices.push(k);
+  var shuffledIndices = shuffle(choiceIndices);
   var choicesEl = document.getElementById('choices');
   shuffledIndices.forEach(function(ci) {
     var btn = document.createElement('button');
@@ -128,7 +132,7 @@ function checkAnswer(btn, chosenIdx, q) {
   else {
     btn.classList.add('wrong');
     buttons.forEach(function(b) { if (parseInt(b.dataset.index) === q.correct) b.classList.add('correct'); });
-    wrongAnswers.push({ question: q.question, yourAnswer: q.choices[chosenIdx], correctAnswer: q.choices[q.correct], explanation: q.explanation });
+    wrongAnswers.push({ question: q.question, correctAnswer: q.choices[q.correct], explanation: q.explanation });
   }
   var resultBox = document.getElementById('result');
   resultBox.classList.add('show', isCorrect ? 'correct' : 'wrong');
@@ -150,7 +154,7 @@ function showScore() {
   if (wrongAnswers.length > 0) {
     reviewHTML = '<div class="review-list"><strong>間違えた問題：</strong><br>';
     wrongAnswers.forEach(function(w) {
-      reviewHTML += '<span class="missed">・' + w.question + '</span><br>' +
+      reviewHTML += '<span class="missed">\u30fb' + w.question + '</span><br>' +
         '&nbsp;&nbsp;読み: ' + w.correctAnswer + '<br>' +
         '&nbsp;&nbsp;' + w.explanation + '<br>';
     });
