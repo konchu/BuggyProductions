@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>漢字クイズ - 常・識</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Hiragino Sans', 'Noto Sans JP', sans-serif;
+    background: #1a1a2e;
+    color: #e0e0e0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .quiz-container {
+    background: #16213e;
+    border-radius: 16px;
+    padding: 40px;
+    max-width: 500px;
+    width: 100%;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+  }
+  h1 { text-align: center; font-size: 1.4em; margin-bottom: 4px; color: #e94560; }
+  .subtitle { text-align: center; font-size: 0.8em; color: #888; margin-bottom: 16px; }
+  .progress { text-align: center; font-size: 0.85em; color: #888; margin-bottom: 24px; }
+  .question-type { text-align: center; font-size: 0.75em; color: #e94560; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; }
+  .question-text { text-align: center; font-size: 3.5em; margin: 16px 0; color: #fff; line-height: 1.5; }
+  .choices { display: flex; flex-direction: column; gap: 12px; margin: 24px 0; }
+  .choice-btn {
+    background: #0f3460; border: 2px solid #0f3460; color: #e0e0e0;
+    padding: 14px 20px; border-radius: 10px; font-size: 1.3em;
+    cursor: pointer; transition: all 0.2s; text-align: center; line-height: 1.4;
+  }
+  .choice-btn:hover:not(:disabled) { background: #1a4a7a; border-color: #e94560; }
+  .choice-btn.correct { background: #2d6a4f; border-color: #52b788; color: #fff; }
+  .choice-btn.wrong { background: #6a2d2d; border-color: #e94560; color: #fff; }
+  .result-box { text-align: center; padding: 16px; border-radius: 10px; margin: 16px 0; display: none; }
+  .result-box.show { display: block; }
+  .result-box.correct { background: #2d6a4f; }
+  .result-box.wrong { background: #6a2d2d; }
+  .result-box .reading { font-size: 1.3em; margin-bottom: 4px; color: #fff; }
+  .result-box .explanation { font-size: 0.95em; margin-top: 8px; color: #ccc; line-height: 1.4; }
+  .next-btn {
+    display: none; width: 100%; background: #e94560; border: none; color: #fff;
+    padding: 14px; border-radius: 10px; font-size: 1.1em; cursor: pointer; margin-top: 12px;
+  }
+  .next-btn:hover { background: #c73652; }
+  .next-btn.show { display: block; }
+  .score-screen { text-align: center; }
+  .score-screen .score { font-size: 3em; color: #e94560; margin: 20px 0; }
+  .score-screen .message { font-size: 1.1em; margin-bottom: 8px; }
+  .review-list { text-align: left; margin: 16px 0; font-size: 0.9em; color: #aaa; line-height: 1.8; }
+  .review-list .missed { color: #e94560; font-size: 1.2em; }
+  .restart-btn {
+    background: #e94560; border: none; color: #fff; padding: 14px 40px;
+    border-radius: 10px; font-size: 1.1em; cursor: pointer; margin-top: 20px;
+  }
+  .restart-btn:hover { background: #c73652; }
+</style>
+</head>
+<body>
+<div class="quiz-container" id="quiz"></div>
+<script>
+const questions = [
+  { type: '読みクイズ', question: '常', choices: ['つねに', 'つちに', 'じょうに', 'つねへ'], correct: 0, explanation: 'つねに — always' },
+  { type: '読みクイズ', question: '非常に', choices: ['ひじょうに', 'ひじょうへ', 'ひじょうで', 'ひじょうも'], correct: 0, explanation: 'ひじょうに — extremely' },
+  { type: '読みクイズ', question: '日常', choices: ['にちじょう', 'にちじょ', 'にちじょうへ', 'にちじょうで'], correct: 0, explanation: 'にちじょう — everyday' },
+  { type: '読みクイズ', question: '通常', choices: ['つうじょう', 'つうじょ', 'つうじょうへ', 'つうじょうで'], correct: 0, explanation: 'つうじょう — usually' },
+  { type: '読みクイズ', question: '正常', choices: ['せいじょう', 'せいじょ', 'せいじょうへ', 'せいじょうで'], correct: 0, explanation: 'せいじょう — normal' },
+  { type: '読みクイズ', question: '常識', choices: ['じょうしき', 'じょうしぎ', 'じょうしけ', 'じょうしぐ'], correct: 0, explanation: 'じょうしき — common sense' },
+  { type: '読みクイズ', question: '意識', choices: ['いしき', 'いしぎ', 'いしけ', 'いしぐ'], correct: 0, explanation: 'いしき — consciousness' },
+  { type: '読みクイズ', question: '知識', choices: ['ちしき', 'ちしぎ', 'ちしけ', 'ちしぐ'], correct: 0, explanation: 'ちしき — knowledge' },
+  { type: '読みクイズ', question: '標識', choices: ['ひょうしき', 'ひょうしぎ', 'ひょうしけ', 'ひょうしぐ'], correct: 0, explanation: 'ひょうしき — sign' },
+  { type: '読みクイズ', question: '面識', choices: ['めんしき', 'めんしぎ', 'めんしけ', 'めんしぐ'], correct: 0, explanation: 'めんしき — acquaintance' }
+];
+
+let currentIndex = 0, score = 0, shuffled = [], wrongAnswers = [];
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function startQuiz() {
+  shuffled = shuffle(questions.map((q, i) => ({...q, _idx: i})));
+  currentIndex = 0; score = 0; wrongAnswers = [];
+  showQuestion();
+}
+
+function showQuestion() {
+  const q = shuffled[currentIndex];
+  document.getElementById('quiz').innerHTML =
+    '<h1>漢字クイズ</h1>' +
+    '<div class="subtitle">常・識 — JLPT N3</div>' +
+    '<div class="progress">' + (currentIndex + 1) + ' / ' + shuffled.length + '</div>' +
+    '<div class="question-type">' + q.type + '</div>' +
+    '<div class="question-text">' + q.question + '</div>' +
+    '<div class="choices" id="choices"></div>' +
+    '<div class="result-box" id="result"><div class="reading" id="resultText"></div><div class="explanation" id="explanation"></div></div>' +
+    '<button class="next-btn" id="nextBtn" onclick="nextQuestion()">' + (currentIndex < shuffled.length - 1 ? '次へ →' : '結果を見る →') + '</button>';
+  const choiceIndices = q.choices.map(function(_, i) { return i; });
+  const shuffledIndices = shuffle(choiceIndices);
+  var choicesEl = document.getElementById('choices');
+  shuffledIndices.forEach(function(ci) {
+    var btn = document.createElement('button');
+    btn.className = 'choice-btn';
+    btn.textContent = q.choices[ci];
+    btn.dataset.index = ci;
+    btn.onclick = function() { checkAnswer(btn, ci, q); };
+    choicesEl.appendChild(btn);
+  });
+}
+
+function checkAnswer(btn, chosenIdx, q) {
+  var buttons = document.querySelectorAll('.choice-btn');
+  buttons.forEach(function(b) { b.disabled = true; });
+  var isCorrect = chosenIdx === q.correct;
+  if (isCorrect) { score++; btn.classList.add('correct'); }
+  else {
+    btn.classList.add('wrong');
+    buttons.forEach(function(b) { if (parseInt(b.dataset.index) === q.correct) b.classList.add('correct'); });
+    wrongAnswers.push({ question: q.question, yourAnswer: q.choices[chosenIdx], correctAnswer: q.choices[q.correct], explanation: q.explanation });
+  }
+  var resultBox = document.getElementById('result');
+  resultBox.classList.add('show', isCorrect ? 'correct' : 'wrong');
+  document.getElementById('resultText').textContent = isCorrect ? '\u2713 正解！' : '\u2717 不正解';
+  document.getElementById('explanation').textContent = q.explanation;
+  document.getElementById('nextBtn').classList.add('show');
+}
+
+function nextQuestion() {
+  currentIndex++;
+  if (currentIndex < shuffled.length) showQuestion();
+  else showScore();
+}
+
+function showScore() {
+  var pct = Math.round((score / shuffled.length) * 100);
+  var message = pct === 100 ? '完璧です！' : pct >= 80 ? 'よくできました！' : pct >= 60 ? 'もう少し練習しよう！' : '復習してからもう一度！';
+  var reviewHTML = '';
+  if (wrongAnswers.length > 0) {
+    reviewHTML = '<div class="review-list"><strong>間違えた問題：</strong><br>';
+    wrongAnswers.forEach(function(w) {
+      reviewHTML += '<span class="missed">・' + w.question + '</span><br>' +
+        '&nbsp;&nbsp;読み: ' + w.correctAnswer + '<br>' +
+        '&nbsp;&nbsp;' + w.explanation + '<br>';
+    });
+    reviewHTML += '</div>';
+  }
+  document.getElementById('quiz').innerHTML =
+    '<div class="score-screen">' +
+      '<h1>結果</h1>' +
+      '<div class="score">' + score + ' / ' + shuffled.length + '</div>' +
+      '<div class="message">' + message + '</div>' +
+      reviewHTML +
+      '<button class="restart-btn" onclick="startQuiz()">もう一度</button>' +
+    '</div>';
+}
+
+startQuiz();
+</script>
+</body>
+</html>
