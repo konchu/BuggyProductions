@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>漢字クエスト - Kanji Quest</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet">
+<style>
+  html,body{margin:0;padding:0;background:#000;height:100%;overflow:hidden;
+    font-family:'DotGothic16',monospace;-webkit-user-select:none;user-select:none;touch-action:none;}
+  #wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;}
+  canvas{image-rendering:pixelated;image-rendering:crisp-edges;background:#000;
+    max-width:100vw;max-height:100vh;}
+  /* ---- touch controls (shown only on touch devices) ---- */
+  #pad,#abtn{display:none;position:fixed;z-index:10;opacity:.45;}
+  @media (hover:none) and (pointer:coarse){ #pad,#abtn{display:block;} }
+  #pad{left:14px;bottom:14px;width:150px;height:150px;}
+  .pbtn{position:absolute;width:50px;height:50px;background:#223;border:2px solid #88a;
+    border-radius:8px;color:#fff;font-size:20px;display:flex;align-items:center;justify-content:center;}
+  #pU{left:50px;top:0}#pD{left:50px;top:100px}#pL{left:0;top:50px}#pR{left:100px;top:50px}
+  #abtn{right:20px;bottom:40px;width:70px;height:70px;background:#321;border:2px solid #a86;
+    border-radius:50%;color:#fff;font-size:22px;display:flex;align-items:center;justify-content:center;}
+</style>
+</head>
+<body>
+<div id="wrap"><canvas id="game" width="960" height="624"></canvas></div>
+<div id="pad">
+  <div class="pbtn" id="pU">▲</div><div class="pbtn" id="pD">▼</div>
+  <div class="pbtn" id="pL">◀</div><div class="pbtn" id="pR">▶</div>
+</div>
+<div id="abtn">A</div>
+
+<script>
+"use strict";
+/* ================================================================
+   ================  WORD SET  —  EDIT HERE!  =====================
+   ================================================================
+   Add, remove, or swap entries freely. Each word needs:
+     kanji   : the target word shown at the bottom of the screen
+     reading : hiragana reading  (appears over enemies / taught by NPCs)
+     meaning : English meaning   (appears over enemies / taught by NPCs)
+   The game pulls everything (enemies, NPC lessons, decoys)
+   from this one list. 4+ words minimum recommended.
+   ================================================================ */
+const WORD_SET = [
+  {kanji:"勉強", reading:"べんきょう", meaning:"study"},
+  {kanji:"約束", reading:"やくそく",   meaning:"promise"},
+  {kanji:"経験", reading:"けいけん",   meaning:"experience"},
+  {kanji:"準備", reading:"じゅんび",   meaning:"preparation"},
+  {kanji:"危険", reading:"きけん",     meaning:"danger"},
+  {kanji:"安全", reading:"あんぜん",   meaning:"safety"},
+  {kanji:"冒険", reading:"ぼうけん",   meaning:"adventure"},
+  {kanji:"武器", reading:"ぶき",       meaning:"weapon"},
+  {kanji:"魔法", reading:"まほう",     meaning:"magic"},
+  {kanji:"回復", reading:"かいふく",   meaning:"recovery"},
+  {kanji:"攻撃", reading:"こうげき",   meaning:"attack"},
+  {kanji:"防御", reading:"ぼうぎょ",   meaning:"defense"},
+  {kanji:"宝物", reading:"たからもの", meaning:"treasure"},
+  {kanji:"仲間", reading:"なかま",     meaning:"companion"},
+  {kanji:"勇気", reading:"ゆうき",     meaning:"courage"},
+  {kanji:"伝説", reading:"でんせつ",   meaning:"legend"},
+  {kanji:"森林", reading:"しんりん",   meaning:"forest"},
+  {kanji:"洞窟", reading:"どうくつ",   meaning:"cave"},
+  {kanji:"記憶", reading:"きおく",     meaning:"memory"},
+  {kanji:"成長", reading:"せいちょう", meaning:"growth"},
+  {kanji:"努力", reading:"どりょく",   meaning:"effort"},
+  {kanji:"目的", reading:"もくてき",   meaning:"purpose"},
+  {kanji:"運命", reading:"うんめい",   meaning:"fate"},
+  {kanji:"知識", reading:"ちしき",     meaning:"knowledge"},
+  {kanji:"練習", reading:"れんしゅう", meaning:"practice"},
+  {kanji:"失敗", reading:"しっぱい",   meaning:"failure"},
+  {kanji:"成功", reading:"せいこう",   meaning:"success"},
+  {kanji:"挑戦", reading:"ちょうせん", meaning:"challenge"},
+  {kanji:"自然", reading:"しぜん",     meaning:"nature"},
+  {kanji:"夜空", reading:"よぞら",     meaning:"night sky"},
+];
+/* ================== end of word set ============================ */
+
+/* -------------------- core constants -------------------------- */
+const T = 16;            // tile size (world px)
+const S = 3;             // screen scale
+const CW = 960, CH = 624;            // canvas px
+const VW = CW / (T*S), VH = CH / (T*S); // 20 x 13 visible tiles
+const cv = document.getElementById('game');
+const cx = cv.getContext('2d');
+cx.imageSmoothingEnabled = false;
+
+const SOLID = new Set([1,3,4,5,9]); // tree, water, wall, roof, fence
+
+/* -------------------- tiny sfx (WebAudio) --------------------- */
+let AC=null;
+function sfx(kind){
+  try{
+    if(!AC) AC = new (window.AudioContext||window.webkitAudioContext)();
+    const t0=AC.currentTime;
+    const note=(f,t,d,type='square',g=.08)=>{
+      const o=AC.createOscillator(),v=AC.createGain();
+      o.type=type;o.frequency.value=f;
+      v.gain.setValueAtTime(g,t0+t);v.gain.exponentialRampToValueAtTime(.001,t0+t+d);
+      o.connect(v).connect(AC.destination);o.start(t0+t);o.stop(t0+t+d);
+    };
+    if(kind==='ok'){note(660,0,.09);note(880,.09,.16);}
+    else if(kind==='correct'){note(523,0,.1);note(659,.1,.1);note(784,.2,.1);note(1047,.3,.28);}
+    else if(kind==='wrong'){note(180,0,.22,'sawtooth',.1);note(120,.1,.25,'sawtooth',.1);}
+    else if(kind==='talk'){note(520,0,.06,'square',.05);}
+    else if(kind==='level'){[523,659,784,1047,1319].forEach((f,i)=>note(f,i*.08,.15));}
+    else if(kind==='heal'){note(784,0,.12,'sine',.1);note(988,.12,.12,'sine',.1);note(1175,.24,.2,'sine',.1);}
+  }catch(e){}
+}
+
+/* -------------------- pixel sprite builder -------------------- */
+function makeSprite(rows, pal){
+  const c=document.createElement('canvas');c.width=16;c.height=16;
+  const g=c.getContext('2d');
+  rows.forEach((row,y)=>{ for(let x=0;x<row.length;x++){
+    const ch=row[x]; if(ch!=='.'&&pal[ch]){g.fillStyle=pal[ch];g.fillRect(x,y,1,1);} }});
+  return c;
+}
+function flipH(img){
+  const c=document.createElement('canvas');c.width=16;c.height=16;
+  const g=c.getContext('2d');g.translate(16,0);g.scale(-1,1);g.drawImage(img,0,0);
+  return c;
+}
+
+/* ---- humanoid frames (shared shape, palette-swapped) ---- */
+const H_DOWN0=[
+"................",
+".....HHHHHH.....",
+"....HHHHHHHH....",
+"....HHHHHHHH....",
+"....HSSSSSSH....",
+"....SESSSSES....",
+"....SSSSSSSS....",
+".....SSSSSS.....",
+"....BBBBBBBB....",
+"...BSBBBBBBSB...",
+"...SSBBBBBBSS...",
+"....BBBBBBBB....",
+".....PPPPPP.....",
+".....PP..PP.....",
+"....TT....TT....",
+"................"];
+const H_DOWN1=[
+"................",
+"................",
+".....HHHHHH.....",
+"....HHHHHHHH....",
+"....HHHHHHHH....",
+"....HSSSSSSH....",
+"....SESSSSES....",
+"....SSSSSSSS....",
+".....SSSSSS.....",
+"....BBBBBBBB....",
+"...BSBBBBBBSB...",
+"...SSBBBBBBSS...",
+"....BBBBBBBB....",
+".....PPPPPP.....",
+"....TTT..TTT....",
+"................"];
+const H_UP0=[
+"................",
+".....HHHHHH.....",
+"....HHHHHHHH....",
+"....HHHHHHHH....",
+"....HHHHHHHH....",
+"....HHHHHHHH....",
+"....HHHHHHHH....",
+".....HHHHHH.....",
+"....BBBBBBBB....",
+"...BSBBBBBBSB...",
+"...SSBBBBBBSS...",
+"....BBBBBBBB....",
+".....PPPPPP.....",
+".....PP..PP.....",
+"....TT....TT....",
+"................"];
+const H_UP1=[
+"................",
+"................",
+".....HHHHHH.....",
+"....HHHHHHHH....",
+"....HHHHHHHH....",
+"....HHHHHHHH....",
+"....HHHHHHHH....",
+"....HHHHHHHH....",
+".....HHHHHH.....",
+"....BBBBBBBB....",
+"...BSBBBBBBSB...",
+"...SSBBBBBBSS...",
+"....BBBBBBBB....",
+".....PPPPPP.....",
+"....TTT..TTT....",
+"................"];
+const H_LEFT0=[
+"................",
+".....HHHHHH.....",
+"....HHHHHHHH....",
+"....HHHHHHHH....",
+"....SSSSHHHH....",
+"....ESSSHHHH....",
+"....SSSSHHH.....",
+".....SSSS.......",
+"....BBBBBBB.....",
+"....SBBBBBBB....",
+"....SBBBBBBB....",
+"....BBBBBBB.....",
+".....PPPPP......",
+".....PP.PP......",
+"....TT...TT.....",
+"................"];
+const H_LEFT1=[
+"................",
+"................",
+".....HHHHHH.....",
+"....HHHHHHHH....",
+"....HHHHHHHH....",
+"....SSSSHHHH....",
+"....ESSSHHHH....",
+"....SSSSHHH.....",
+".....SSSS.......",
+"....BBBBBBB.....",
+"....SBBBBBBB....",
+"....BBBBBBB.....",
+".....PPPPP......",
+"......PPP.......",
+".....TTTT.......",
+"................"];
+
+const PAL_HERO ={H:'#e8c44a',S:'#f2c79b',E:'#222',B:'#3a5bd9',P:'#27348b',T:'#7a4a22'};
+const PAL_GIRL ={H:'#a8512e',S:'#f2c79b',E:'#222',B:'#d95b8a',P:'#8b2748',T:'#5a3a22'};
+const PAL_ELDER={H:'#d8d8d8',S:'#e8b88a',E:'#222',B:'#6a4a9c',P:'#3a2a5c',T:'#444'};
+const PAL_BOY  ={H:'#3a2a1a',S:'#f2c79b',E:'#222',B:'#3a9c5a',P:'#1a5c33',T:'#5a3a22'};
+const PAL_INN  ={H:'#5a3a8a',S:'#f2c79b',E:'#222',B:'#d9a23a',P:'#8b6627',T:'#5a3a22'};
+const PAL_GUARD={H:'#888',  S:'#e8b88a',E:'#222',B:'#9c3a3a',P:'#5c1a1a',T:'#333'};
+
+function buildCharSet(pal){
+  const d0=makeSprite(H_DOWN0,pal), d1=makeSprite(H_DOWN1,pal);
+  const u0=makeSprite(H_UP0,pal),   u1=makeSprite(H_UP1,pal);
+  const l0=makeSprite(H_LEFT0,pal), l1=makeSprite(H_LEFT1,pal);
+  return {down:[d0,d1],up:[u0,u1],left:[l0,l1],right:[flipH(l0),flipH(l1)]};
+}
+
+/* ---- enemy shapes ---- */
+const SLIME=[
+"................",
+"................",
+"................",
+"......GGGG......",
+"....GGGGGGGG....",
+"...GGGGGGGGGG...",
+"..GGGGGGGGGGGG..",
+"..GGWWGGGGWWGG..",
+"..GGWEGGGGWEGG..",
+".GGGGGGGGGGGGGG.",
+".GGGGGGDDGGGGGG.",
+".GGGGGGGGGGGGGG.",
+"..GGGGGGGGGGGG..",
+"...DGGGGGGGGD...",
+"................",
+"................"];
+const BAT=[
+"................",
+"................",
+"..G..........G..",
+".GGG........GGG.",
+".GGGG......GGGG.",
+".GGGGG.GG.GGGGG.",
+".GGGGGGGGGGGGGG.",
+"..GGGGGGGGGGGG..",
+"...GGWGGGGWGG...",
+"...GGEGGGGEGG...",
+"....GGGGGGGG....",
+".....GDDDDG.....",
+"......G..G......",
+"................",
+"................",
+"................"];
+const GHOST=[
+"................",
+"......GGGG......",
+"....GGGGGGGG....",
+"...GGGGGGGGGG...",
+"...GGGGGGGGGG...",
+"...GWEGGGGWEG...",  
+"...GGGGGGGGGG...",
+"...GGGDDDDGGG...",
+"...GGGGGGGGGG...",
+"...GGGGGGGGGG...",
+"...GGGGGGGGGG...",
+"...GGGGGGGGGG...",
+"...G.GG.GG.G....",
+"................",
+"................",
+"................"];
+const SHROOM=[
+"................",
+"................",
+"......GGGG......",
+"....GGGGGGGG....",
+"...GGWWGGGGGG...",
+"..GGGWWGGGWWGG..",
+"..GGGGGGGGWWGG..",
+"..GGGGGGGGGGGG..",
+"...SSSSSSSSSS...",
+"....SSESSESS....",
+"....SSSSSSSS....",
+"....SSSDDSSS....",
+".....SSSSSS.....",
+"......SS.SS.....",
+"................",
+"................"];
+const ENEMY_DEFS=[
+  {shape:SLIME, pal:{G:'#4ab84a',D:'#2a7a2a',W:'#fff',E:'#222'}},
+  {shape:SLIME, pal:{G:'#4a7ad9',D:'#2a4a9a',W:'#fff',E:'#222'}},
+  {shape:BAT,   pal:{G:'#8a4ad9',D:'#caa',W:'#fff',E:'#222'}},
+  {shape:BAT,   pal:{G:'#555',   D:'#daa',W:'#fff',E:'#c33'}},
+  {shape:GHOST, pal:{G:'#e8e8f4',D:'#445',W:'#445',E:'#112'}},
+  {shape:GHOST, pal:{G:'#9ad9d9',D:'#2a6a6a',W:'#2a6a6a',E:'#113'}},
+  {shape:SHROOM,pal:{G:'#d94a4a',W:'#fff',S:'#f2dcb4',E:'#222',D:'#a96'}},
+  {shape:SHROOM,pal:{G:'#b86ad9',W:'#fff',S:'#f2dcb4',E:'#222',D:'#a96'}},
+];
+const enemySprites = ENEMY_DEFS.map(d=>makeSprite(d.shape,d.pal));
+
+/* -------------------- tiles -------------------------- */
+function tileCanvas(draw){
+  const c=document.createElement('canvas');c.width=16;c.height=16;
+  draw(c.getContext('2d'));return c;
+}
+function speck(g,seedX,col,n){ // deterministic speckles
+  let s=seedX;
+  for(let i=0;i<n;i++){ s=(s*16807)%2147483647;
+    g.fillStyle=col; g.fillRect(s%16, (s>>4)%16, 1,1); }
+}
+const TILES={};
+TILES[0]=tileCanvas(g=>{g.fillStyle='#58a83c';g.fillRect(0,0,16,16);
+  g.fillStyle='#4c9434';g.fillRect(2,3,1,2);g.fillRect(9,7,1,2);g.fillRect(13,2,1,2);
+  g.fillRect(5,11,1,2);g.fillRect(11,13,1,2);g.fillStyle='#68b84c';
+  g.fillRect(4,5,1,1);g.fillRect(12,9,1,1);g.fillRect(7,14,1,1);});
+TILES[1]=tileCanvas(g=>{g.fillStyle='#58a83c';g.fillRect(0,0,16,16); // tree
+  g.fillStyle='#1f6a2a';g.beginPath();
+  g.fillRect(3,1,10,3);g.fillRect(1,3,14,8);g.fillRect(3,11,10,2);
+  g.fillStyle='#2f8a3a';g.fillRect(3,2,6,2);g.fillRect(2,4,5,3);g.fillRect(9,5,4,2);
+  g.fillStyle='#6a4426';g.fillRect(6,12,4,3);g.fillStyle='#54341c';g.fillRect(6,12,1,3);});
+TILES[2]=tileCanvas(g=>{g.fillStyle='#d8b878';g.fillRect(0,0,16,16); // path
+  g.fillStyle='#c8a868';g.fillRect(1,2,2,1);g.fillRect(8,5,2,1);g.fillRect(12,11,2,1);
+  g.fillRect(4,13,2,1);g.fillRect(13,3,1,1);g.fillStyle='#e8cc90';
+  g.fillRect(6,8,1,1);g.fillRect(11,7,1,1);});
+TILES[3]=tileCanvas(g=>{g.fillStyle='#3a6ad9';g.fillRect(0,0,16,16); // water f0
+  g.fillStyle='#5a8ae9';g.fillRect(2,3,4,1);g.fillRect(9,8,4,1);g.fillRect(4,12,4,1);});
+TILES.waterB=tileCanvas(g=>{g.fillStyle='#3a6ad9';g.fillRect(0,0,16,16); // water f1
+  g.fillStyle='#5a8ae9';g.fillRect(4,4,4,1);g.fillRect(7,9,4,1);g.fillRect(2,13,4,1);});
+TILES[4]=tileCanvas(g=>{g.fillStyle='#e8dcc4';g.fillRect(0,0,16,16); // wall
+  g.fillStyle='#b8a888';g.fillRect(0,0,16,1);g.fillRect(0,15,16,1);
+  g.fillStyle='#9a8868';g.fillRect(0,5,16,1);g.fillRect(0,10,16,1);
+  g.fillRect(5,0,1,5);g.fillRect(11,5,1,5);g.fillRect(5,10,1,6);});
+TILES[5]=tileCanvas(g=>{g.fillStyle='#c44a3a';g.fillRect(0,0,16,16); // roof
+  g.fillStyle='#a43a2c';g.fillRect(0,4,16,1);g.fillRect(0,9,16,1);g.fillRect(0,14,16,1);
+  g.fillStyle='#d86a52';g.fillRect(0,0,16,1);g.fillRect(0,5,16,1);g.fillRect(0,10,16,1);});
+TILES[6]=tileCanvas(g=>{g.fillStyle='#e8dcc4';g.fillRect(0,0,16,16); // door
+  g.fillStyle='#7a4a22';g.fillRect(3,2,10,14);g.fillStyle='#5a3618';
+  g.fillRect(3,2,10,1);g.fillRect(3,2,1,14);g.fillStyle='#e8c44a';g.fillRect(10,9,2,2);});
+TILES[7]=tileCanvas(g=>{g.drawImage(TILES[0],0,0); // flowers
+  g.fillStyle='#e8e84a';g.fillRect(3,4,2,2);g.fillStyle='#e85a8a';g.fillRect(10,9,2,2);
+  g.fillStyle='#fff';g.fillRect(6,12,2,2);});
+TILES[8]=tileCanvas(g=>{g.drawImage(TILES[0],0,0); // tall grass
+  g.fillStyle='#3a8a2c';
+  for(let x=1;x<16;x+=3){g.fillRect(x,6,1,9);g.fillRect(x+1,9,1,6);}});
+TILES[9]=tileCanvas(g=>{g.drawImage(TILES[0],0,0); // fence
+  g.fillStyle='#8a6a3a';g.fillRect(0,7,16,2);g.fillRect(2,4,2,9);g.fillRect(12,4,2,9);
+  g.fillStyle='#6a4e28';g.fillRect(0,9,16,1);});
+
+/* -------------------- maps -------------------------- */
+function blankMap(w,h,fill){const m=[];for(let y=0;y<h;y++){m.push(new Array(w).fill(fill));}return m;}
+function rect(m,x,y,w,h,t){for(let j=y;j<y+h;j++)for(let i=x;i<x+w;i++)if(m[j]&&m[j][i]!==undefined)m[j][i]=t;}
+
+function makeTown(){
+  const W=26,H=18,m=blankMap(W,H,0);
+  rect(m,0,0,W,1,1);rect(m,0,H-1,W,1,1);rect(m,0,0,1,H,1);rect(m,W-1,0,1,H,1); // tree border
+  // houses: roof rows + wall row + door
+  function house(x,y,w){rect(m,x,y,w,2,5);rect(m,x,y+2,w,1,4);m[y+2][x+(w>>1)]=6;}
+  house(3,2,5); house(11,2,5); house(19,2,5);
+  house(4,8,4); house(18,8,4);
+  rect(m,12,5,2,H-5,2);            // main path down
+  rect(m,5,12,16,2,2);             // cross path
+  rect(m,2,12,2,1,7);rect(m,22,12,2,1,7); // flowers
+  rect(m,8,6,3,3,3);               // small pond
+  rect(m,15,7,1,1,7);rect(m,3,6,1,1,7);
+  m[H-1][12]=2;m[H-1][13]=2;       // exit south (gap in trees)
+  return {grid:m,w:W,h:H};
+}
+function makeField(){
+  const W=30,H=22,m=blankMap(W,H,0);
+  rect(m,0,0,W,1,1);rect(m,0,H-1,W,1,1);rect(m,0,0,1,H,1);rect(m,W-1,0,1,H,1);
+  m[0][14]=2;m[0][15]=2;           // exit north back to town
+  rect(m,14,1,2,4,2);
+  // scattered woods / ponds / grass patches
+  rect(m,4,4,2,2,1); rect(m,23,3,3,2,1); rect(m,7,15,2,3,1);
+  rect(m,20,16,4,2,1); rect(m,3,9,1,2,1); rect(m,26,9,2,1,1);
+  rect(m,10,8,4,3,3);              // pond
+  rect(m,17,5,5,4,8); rect(m,4,12,6,4,8); rect(m,21,11,6,4,8); rect(m,12,16,6,3,8);
+  rect(m,2,2,1,1,7); rect(m,27,19,1,1,7); rect(m,15,12,1,1,7);
+  return {grid:m,w:W,h:H};
+}
+const MAPS={town:makeTown(),field:makeField()};
+
+/* -------------------- game state -------------------------- */
+const heroSprites = buildCharSet(PAL_HERO);
+const player={map:'town',tx:12,ty:6,x:12*T,y:6*T,dir:'down',frame:0,moving:false,
+  hp:20,maxhp:20,lv:1,xp:0,next:20,found:0};
+
+const NPCS=[
+ {map:'town',tx:6, ty:6, sp:buildCharSet(PAL_ELDER),dir:'down',name:'長老',
+  role:'elder'},
+ {map:'town',tx:13,ty:4, sp:buildCharSet(PAL_INN),  dir:'down',name:'宿屋のおばさん',
+  role:'inn'},
+ {map:'town',tx:9, ty:13,sp:buildCharSet(PAL_GIRL), dir:'down',name:'村の娘',
+  role:'reading'},
+ {map:'town',tx:17,ty:13,sp:buildCharSet(PAL_BOY),  dir:'down',name:'村の少年',
+  role:'meaning'},
+ {map:'town',tx:12,ty:16,sp:buildCharSet(PAL_GUARD),dir:'down',name:'門番',
+  role:'guard'},
+];
+
+let mode='title';          // title | play | dialog | gameover
+let dialog=null;           // {pages:[..], i, t}
+let enemies=[];            // active enemies on the field
+let wave=null;             // {target, queue:[descriptors], total, spawned, done}
+let floats=[];             // floating combat text
+let banner=null;           // word-learned banner {word,t}
+let shake=0, flashRed=0, waveDelay=0;
+let anim=0;                // global animation clock
+
+/* -------------------- wave / enemy logic ------------------- */
+function pick(arr){return arr[Math.floor(Math.random()*arr.length)];}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+
+function newWave(){
+  const target=pick(WORD_SET);
+  const total=1+Math.floor(Math.random()*8);          // 1–8 enemies
+  // decoys: words that don't share the target's reading or meaning
+  const decoyPool=shuffle(WORD_SET.filter(w=>w!==target&&w.reading!==target.reading&&w.meaning!==target.meaning)).slice(0,total-1);
+  const descs=[{word:target,correct:true},...decoyPool.map(w=>({word:w,correct:false}))];
+  descs.forEach(d=>{d.mode=Math.random()<0.5?'reading':'meaning';
+    d.label=d.mode==='reading'?d.word.reading:d.word.meaning;
+    d.type=Math.floor(Math.random()*ENEMY_DEFS.length);});
+  shuffle(descs);
+  // make sure the correct answer is among the first 4 spawned
+  const ci=descs.findIndex(d=>d.correct);
+  const lim=Math.min(4,descs.length);
+  if(ci>=lim){const j=Math.floor(Math.random()*lim);[descs[ci],descs[j]]=[descs[j],descs[ci]];}
+  wave={target,queue:descs,total,spawned:0,done:false};
+  enemies=[];
+  while(enemies.length<Math.min(4,total)) spawnNext();
+}
+function openTile(map,avoid){
+  const M=MAPS[map];
+  for(let tries=0;tries<400;tries++){
+    const tx=1+Math.floor(Math.random()*(M.w-2)), ty=2+Math.floor(Math.random()*(M.h-3));
+    if(SOLID.has(M.grid[ty][tx]))continue;
+    if(player.map===map&&Math.abs(tx-player.tx)+Math.abs(ty-player.ty)<5)continue;
+    if(enemies.some(e=>e.tx===tx&&e.ty===ty))continue;
+    if(avoid&&avoid(tx,ty))continue;
+    return {tx,ty};
+  }
+  return {tx:5,ty:5};
+}
+function spawnNext(){
+  if(!wave||wave.spawned>=wave.queue.length)return;
+  const d=wave.queue[wave.spawned++];
+  const p=openTile('field');
+  enemies.push({...d,tx:p.tx,ty:p.ty,x:p.tx*T,y:p.ty*T,moving:false,
+    pause:Math.random()*2,bob:Math.random()*6.28,dying:0});
+}
+
+/* -------------------- movement helpers --------------------- */
+function blocked(map,tx,ty,self){
+  const M=MAPS[map];
+  if(tx<0||ty<0||tx>=M.w||ty>=M.h)return true;
+  if(SOLID.has(M.grid[ty][tx]))return true;
+  if(map==='town'&&NPCS.some(n=>n.tx===tx&&n.ty===ty))return true;
+  if(map==='field'&&enemies.some(e=>e!==self&&!e.dying&&e.tx===tx&&e.ty===ty))return true;
+  return false;
+}
+
+/* -------------------- input -------------------------------- */
+const keys={};
+addEventListener('keydown',e=>{
+  if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key))e.preventDefault();
+  keys[e.key.toLowerCase()]=true;
+  if(e.key==='Enter'||e.key.toLowerCase()==='z'||e.key===' ')action();
+});
+addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false;});
+function bindPad(id,k){const el=document.getElementById(id);
+  const on=e=>{e.preventDefault();keys[k]=true;};
+  const off=e=>{e.preventDefault();keys[k]=false;};
+  el.addEventListener('touchstart',on);el.addEventListener('touchend',off);el.addEventListener('touchcancel',off);}
+bindPad('pU','arrowup');bindPad('pD','arrowdown');bindPad('pL','arrowleft');bindPad('pR','arrowright');
+document.getElementById('abtn').addEventListener('touchstart',e=>{e.preventDefault();action();});
+
+function dirInput(){
+  if(keys['arrowup']||keys['w'])return 'up';
+  if(keys['arrowdown']||keys['s'])return 'down';
+  if(keys['arrowleft']||keys['a'])return 'left';
+  if(keys['arrowright']||keys['d'])return 'right';
+  return null;
+}
+const DV={up:[0,-1],down:[0,1],left:[-1,0],right:[1,0]};
+
+function action(){
+  if(mode==='title'){mode='play';sfx('ok');newWave();return;}
+  if(mode==='gameover'){
+    player.hp=player.maxhp;player.map='town';player.tx=12;player.ty=6;
+    player.x=player.tx*T;player.y=player.ty*T;player.moving=false;
+    mode='play';newWave();sfx('ok');return;}
+  if(mode==='dialog'){
+    if(dialog.t<dialog.pages[dialog.i].length){dialog.t=999;return;} // finish typing
+    dialog.i++;sfx('talk');
+    if(dialog.i>=dialog.pages.length){
+      if(dialog.onClose)dialog.onClose();
+      dialog=null;mode='play';}
+    else dialog.t=0;
+    return;}
+  if(mode==='play'&&!player.moving&&player.map==='town'){
+    const [dx,dy]=DV[player.dir];
+    const n=NPCS.find(n=>n.tx===player.tx+dx&&n.ty===player.ty+dy);
+    if(n)talkTo(n);
+  }
+}
+
+/* -------------------- NPC dialog --------------------------- */
+function talkTo(n){
+  const w=wave?wave.target:WORD_SET[0];
+  let pages=[],onClose=null;
+  if(n.role==='elder'){
+    pages=[`${n.name}：よくきたな、わかものよ。`,
+      `いまの　ことばは…\n「${w.kanji}」。\nよみは　「${w.reading}」じゃ。`,
+      `いみは　“${w.meaning}”。\nフィールドで　こたえを\nもつ　まものを　たおすのじゃ！`];
+  }else if(n.role==='inn'){
+    if(player.hp<player.maxhp){
+      pages=[`${n.name}：あら、おつかれさま。\nゆっくり　やすんでいってね。`,
+        `…………`,`HPが　ぜんかいふくした！`];
+      onClose=()=>{player.hp=player.maxhp;sfx('heal');};
+    }else pages=[`${n.name}：げんきそうね！\nまた　つかれたら　おいで。`];
+  }else if(n.role==='reading'){
+    pages=[`${n.name}：「${w.kanji}」の　よみかた？`,
+      `「${w.reading}」よ。\nわすれないでね！`];
+  }else if(n.role==='meaning'){
+    pages=[`${n.name}：「${w.kanji}」の　いみは\nえいごで　“${w.meaning}”　だよ！`,
+      `まものの　あたまの　うえを\nよく　みてね。`];
+  }else{
+    pages=[`${n.name}：みなみの　もんから\nフィールドに　でられるぞ。`,
+      `ただしい　こたえの　まものに\nぶつかれば　しょうり。\nまちがえると　ダメージだ！`,
+      `まものは　ぜんぶで　${wave?wave.total:'?'}たい。\nがめんには　4たいまでしか\nあらわれない。`];
+  }
+  // face the player
+  const fdx=player.tx-n.tx,fdy=player.ty-n.ty;
+  n.dir=Math.abs(fdx)>Math.abs(fdy)?(fdx>0?'right':'left'):(fdy>0?'down':'up');
+  dialog={pages,i:0,t:0,onClose};mode='dialog';sfx('talk');
+}
+
+/* -------------------- combat ------------------------------- */
+function bump(e){
+  if(e.dying)return;
+  if(e.correct){
+    sfx('correct');
+    player.found++;
+    const gain=8+wave.total*2;
+    player.xp+=gain;
+    floats.push({x:e.x+8,y:e.y,txt:'せいかい！',col:'#ffe066',t:0});
+    floats.push({x:player.x+8,y:player.y-6,txt:`+${gain} EXP`,col:'#9fdcff',t:0});
+    banner={word:wave.target,t:0};
+    enemies.forEach(o=>o.dying=0.0001);
+    wave.done=true;waveDelay=2.2;
+    while(player.xp>=player.next){
+      player.xp-=player.next;player.lv++;player.next=Math.floor(player.next*1.5);
+      player.maxhp+=5;player.hp=player.maxhp;
+      floats.push({x:player.x+8,y:player.y-14,txt:'レベルアップ！',col:'#aaffaa',t:0});
+      sfx('level');
+    }
+  }else{
+    sfx('wrong');
+    const dmg=3;
+    player.hp=Math.max(0,player.hp-dmg);
+    shake=0.35;flashRed=0.3;
+    floats.push({x:player.x+8,y:player.y,txt:`-${dmg}`,col:'#ff7766',t:0});
+    floats.push({x:e.x+8,y:e.y,txt:'ちがう…',col:'#ccc',t:0});
+    e.dying=0.0001;
+    setTimeout(()=>{if(!wave.done)spawnNext();},600);
+    if(player.hp<=0){mode='gameover';sfx('wrong');}
+  }
+}
+
+/* -------------------- update ------------------------------- */
+let last=performance.now();
+function update(dt){
+  anim+=dt;
+  if(shake>0)shake-=dt; if(flashRed>0)flashRed-=dt;
+  floats.forEach(f=>f.t+=dt); floats=floats.filter(f=>f.t<1.4);
+  if(banner){banner.t+=dt;if(banner.t>2.4)banner=null;}
+
+  if(mode==='dialog'&&dialog)dialog.t+=dt*40;
+  if(mode!=='play')return;
+
+  if(waveDelay>0){waveDelay-=dt;if(waveDelay<=0)newWave();}
+
+  /* --- player --- */
+  const SPD=70;
+  if(!player.moving){
+    const d=dirInput();
+    if(d){
+      player.dir=d;
+      const [dx,dy]=DV[d];
+      const nx=player.tx+dx,ny=player.ty+dy;
+      // attack: walking into an enemy
+      if(player.map==='field'){
+        const e=enemies.find(e=>!e.dying&&e.tx===nx&&e.ty===ny);
+        if(e){bump(e);}
+        else if(!blocked(player.map,nx,ny)){player.tx=nx;player.ty=ny;player.moving=true;}
+      }else if(!blocked(player.map,nx,ny)){player.tx=nx;player.ty=ny;player.moving=true;}
+    }
+  }
+  if(player.moving){
+    const gx=player.tx*T,gy=player.ty*T;
+    player.x+=Math.sign(gx-player.x)*Math.min(SPD*dt,Math.abs(gx-player.x));
+    player.y+=Math.sign(gy-player.y)*Math.min(SPD*dt,Math.abs(gy-player.y));
+    player.frame+=dt*8;
+    if(player.x===gx&&player.y===gy){
+      player.moving=false;
+      /* map transitions */
+      const M=MAPS[player.map];
+      if(player.map==='town'&&player.ty>=M.h-1){
+        player.map='field';player.tx=(player.tx===12)?14:15;player.ty=1;
+        player.x=player.tx*T;player.y=player.ty*T;}
+      else if(player.map==='field'&&player.ty<=0){
+        player.map='town';player.tx=(player.tx===14)?12:13;player.ty=MAPS.town.h-2;
+        player.x=player.tx*T;player.y=player.ty*T;}
+    }
+  }else player.frame=0;
+
+  /* --- enemies --- */
+  if(player.map==='field'){
+    enemies.forEach(e=>{
+      e.bob+=dt*4;
+      if(e.dying){e.dying+=dt;return;}
+      if(e.moving){
+        const gx=e.tx*T,gy=e.ty*T,sp=28;
+        e.x+=Math.sign(gx-e.x)*Math.min(sp*dt,Math.abs(gx-e.x));
+        e.y+=Math.sign(gy-e.y)*Math.min(sp*dt,Math.abs(gy-e.y));
+        if(e.x===gx&&e.y===gy){e.moving=false;e.pause=0.6+Math.random()*1.6;}
+      }else{
+        e.pause-=dt;
+        if(e.pause<=0){
+          const d=pick(['up','down','left','right']);
+          const [dx,dy]=DV[d];const nx=e.tx+dx,ny=e.ty+dy;
+          if(!blocked('field',nx,ny,e)&&!(nx===player.tx&&ny===player.ty)){
+            e.tx=nx;e.ty=ny;e.moving=true;
+          }else e.pause=0.5;
+        }
+      }
+    });
+    enemies=enemies.filter(e=>!e.dying||e.dying<0.5);
+  }
+}
+
+/* -------------------- drawing ------------------------------ */
+function win(x,y,w,h){ // classic FF blue window
+  const g=cx;
+  g.fillStyle='rgba(8,8,40,0.92)';
+  const grad=g.createLinearGradient(0,y,0,y+h);
+  grad.addColorStop(0,'#1830a0');grad.addColorStop(1,'#080830');
+  g.fillStyle=grad;g.fillRect(x,y,w,h);
+  g.lineWidth=3;g.strokeStyle='#fff';g.strokeRect(x+3,y+3,w-6,h-6);
+  g.lineWidth=2;g.strokeStyle='#8090c0';g.strokeRect(x+7,y+7,w-14,h-14);
+}
+function text(str,x,y,size,col='#fff',align='left',outline=true){
+  cx.font=size+"px 'DotGothic16', monospace";
+  cx.textAlign=align;cx.textBaseline='top';
+  if(outline){cx.fillStyle='#101028';
+    cx.fillText(str,x+2,y+2);}
+  cx.fillStyle=col;cx.fillText(str,x,y);
+}
+
+function camera(){
+  const M=MAPS[player.map];
+  let cxw=player.x+8-(VW*T)/2, cyw=player.y+8-(VH*T)/2;
+  cxw=Math.max(0,Math.min(cxw,M.w*T-VW*T));
+  cyw=Math.max(0,Math.min(cyw,M.h*T-VH*T));
+  if(M.w*T<VW*T)cxw=(M.w*T-VW*T)/2;
+  if(shake>0){cxw+=(Math.random()-0.5)*6;cyw+=(Math.random()-0.5)*6;}
+  return {x:cxw,y:cyw};
+}
+function w2s(cam,wx,wy){return [Math.round((wx-cam.x)*S),Math.round((wy-cam.y)*S)];}
+
+function drawChar(cam,sp,dir,frame,x,y){
+  const img=sp[dir][Math.floor(frame)%2];
+  const [sx,sy]=w2s(cam,x,y-2);
+  cx.drawImage(img,sx,sy,16*S,16*S);
+}
+
+function draw(){
+  cx.fillStyle='#000';cx.fillRect(0,0,CW,CH);
+
+  if(mode==='title'){drawTitle();return;}
+
+  const cam=camera();
+  const M=MAPS[player.map];
+  const waterFrame=Math.floor(anim*2)%2;
+
+  /* tiles */
+  const tx0=Math.floor(cam.x/T),ty0=Math.floor(cam.y/T);
+  for(let ty=ty0;ty<=ty0+VH;ty++)for(let tx=tx0;tx<=tx0+VW;tx++){
+    if(ty<0||tx<0||ty>=M.h||tx>=M.w)continue;
+    let t=M.grid[ty][tx];
+    let img=(t===3&&waterFrame)?TILES.waterB:TILES[t];
+    // draw grass under trees/decals already baked in
+    const [sx,sy]=w2s(cam,tx*T,ty*T);
+    cx.drawImage(img,sx,sy,T*S,T*S);
+  }
+
+  /* entities sorted by y */
+  const ents=[];
+  if(player.map==='town')NPCS.forEach(n=>ents.push({y:n.ty*T,d:()=>drawChar(cam,n.sp,n.dir,0,n.tx*T,n.ty*T)}));
+  if(player.map==='field')enemies.forEach(e=>{
+    ents.push({y:e.y,d:()=>{
+      const bobY=Math.sin(e.bob)*1.5;
+      const [sx,sy]=w2s(cam,e.x,e.y+bobY-1);
+      if(e.dying){cx.globalAlpha=Math.max(0,1-e.dying*2.2);}
+      cx.drawImage(enemySprites[e.type],sx,sy,16*S,16*S);
+      cx.globalAlpha=1;
+    }});
+  });
+  ents.push({y:player.y+0.1,d:()=>drawChar(cam,heroSprites,player.dir,player.frame,player.x,player.y)});
+  ents.sort((a,b)=>a.y-b.y).forEach(e=>e.d());
+
+  /* enemy labels (drawn over everything in the world) */
+  if(player.map==='field')enemies.forEach(e=>{
+    if(e.dying)return;
+    const [sx,sy]=w2s(cam,e.x+8,e.y-4+Math.sin(e.bob)*1.5);
+    cx.font="16px 'DotGothic16', monospace";
+    const wpx=cx.measureText(e.label).width+14;
+    cx.fillStyle='rgba(8,8,32,0.82)';
+    cx.fillRect(sx-wpx/2,sy-22,wpx,21);
+    cx.strokeStyle='#aab';cx.lineWidth=1;cx.strokeRect(sx-wpx/2+.5,sy-21.5,wpx-1,20);
+    text(e.label,sx,sy-19,16,'#fff','center',false);
+  });
+
+  /* floating text */
+  floats.forEach(f=>{
+    const [sx,sy]=w2s(cam,f.x,f.y);
+    cx.globalAlpha=Math.max(0,1-f.t/1.4);
+    text(f.txt,sx,sy-f.t*26,18,f.col,'center');
+    cx.globalAlpha=1;
+  });
+
+  drawHUD();
+  if(mode==='dialog'&&dialog)drawDialog();
+  if(mode==='gameover')drawGameOver();
+  if(flashRed>0){cx.fillStyle=`rgba(255,0,0,${flashRed*0.5})`;cx.fillRect(0,0,CW,CH);}
+}
+
+function drawHUD(){
+  /* status window — top left */
+  win(10,10,250,74);
+  text(`LV ${player.lv}`,26,22,18,'#fff');
+  text(`HP`,26,46,18,'#9fdcff');
+  // hp bar
+  const bw=140;
+  cx.fillStyle='#202048';cx.fillRect(62,48,bw,14);
+  const r=player.hp/player.maxhp;
+  cx.fillStyle=r>0.5?'#4ad94a':r>0.25?'#e8c44a':'#e85a4a';
+  cx.fillRect(62,48,bw*r,14);
+  cx.strokeStyle='#fff';cx.lineWidth=1;cx.strokeRect(62.5,48.5,bw-1,13);
+  text(`${player.hp}/${player.maxhp}`,210,46,16,'#fff');
+  text(`EXP ${player.xp}/${player.next}`,120,22,14,'#aab');
+
+  /* words found — top right */
+  win(CW-200,10,190,46);
+  text(`ことば ${player.found}`,CW-184,22,18,'#ffe066');
+  if(player.map==='field'&&wave&&!wave.done){
+    const left=wave.queue.length-wave.spawned+enemies.filter(e=>!e.dying).length;
+    text(`のこり ${left}たい`,CW-184,38,13,'#aab');
+  }
+
+  /* target word — bottom center */
+  if(player.map==='field'&&wave){
+    const w=300,h=86,x=(CW-w)/2,y=CH-h-12;
+    win(x,y,w,h);
+    text('この ことばを さがせ！',CW/2,y+14,14,'#9fdcff','center');
+    text(wave.target.kanji,CW/2,y+32,40,'#ffe066','center');
+  }else if(player.map==='town'){
+    const w=420,h=46,x=(CW-w)/2,y=CH-h-12;
+    win(x,y,w,h);
+    const k=wave?wave.target.kanji:'？？';
+    text(`「${k}」… むらびとに きいてみよう (Z/Enter)`,CW/2,y+15,15,'#fff','center');
+  }
+
+  /* learned-word banner */
+  if(banner){
+    const a=Math.min(1,banner.t*3,(2.4-banner.t)*2);
+    cx.globalAlpha=Math.max(0,a);
+    const w=440,h=64,x=(CW-w)/2,y=110;
+    win(x,y,w,h);
+    text(`${banner.word.kanji}（${banner.word.reading}）＝ ${banner.word.meaning}`,
+      CW/2,y+22,20,'#ffe066','center');
+    cx.globalAlpha=1;
+  }
+}
+
+function drawDialog(){
+  const w=CW-120,h=140,x=60,y=CH-h-18;
+  win(x,y,w,h);
+  const page=dialog.pages[dialog.i];
+  const shown=page.slice(0,Math.floor(dialog.t));
+  const lines=shown.split('\n');
+  lines.forEach((ln,i)=>text(ln,x+28,y+24+i*30,20,'#fff'));
+  if(Math.floor(dialog.t)>=page.length&&Math.floor(anim*2)%2===0){
+    text('▼',x+w-40,y+h-34,18,'#fff');
+  }
+}
+
+function drawTitle(){
+  const g=cx.createLinearGradient(0,0,0,CH);
+  g.addColorStop(0,'#0a0a3a');g.addColorStop(1,'#000010');
+  cx.fillStyle=g;cx.fillRect(0,0,CW,CH);
+  // starfield
+  for(let i=0;i<70;i++){const sx=(i*733)%CW,sy=(i*397)%(CH*0.6);
+    cx.fillStyle=(Math.floor(anim*2+i)%7===0)?'#fff':'#667';
+    cx.fillRect(sx,sy,2,2);}
+  text('漢字クエスト',CW/2,150,72,'#ffe066','center');
+  text('- KANJI QUEST -',CW/2,240,22,'#9fdcff','center');
+  win(CW/2-280,300,560,170);
+  text('やじるし / WASD ： うごく',CW/2,326,18,'#fff','center');
+  text('Z / Enter ： はなす・けってい',CW/2,356,18,'#fff','center');
+  text('ただしい こたえの まものに ぶつかれ！',CW/2,396,18,'#ffe066','center');
+  text('まちがえると ダメージ。まちでは むらびとが おしえてくれる。',CW/2,426,15,'#aab','center');
+  if(Math.floor(anim*2)%2===0)text('PUSH Z / ENTER',CW/2,520,24,'#fff','center');
+}
+
+function drawGameOver(){
+  cx.fillStyle='rgba(0,0,0,0.7)';cx.fillRect(0,0,CW,CH);
+  win(CW/2-220,CH/2-90,440,180);
+  text('ぜんめつ…',CW/2,CH/2-60,34,'#e85a4a','center');
+  text(`みつけた ことば：${player.found}`,CW/2,CH/2-8,18,'#fff','center');
+  if(Math.floor(anim*2)%2===0)text('Z / Enter で つづける',CW/2,CH/2+40,18,'#ffe066','center');
+}
+
+/* -------------------- main loop ---------------------------- */
+function loop(now){
+  const dt=Math.min(0.05,(now-last)/1000);last=now;
+  update(dt);draw();
+  requestAnimationFrame(loop);
+}
+/* wait for the pixel font so Japanese renders crisply */
+document.fonts.load("20px 'DotGothic16'").finally(()=>{
+  requestAnimationFrame(t=>{last=t;loop(t);});
+});
+</script>
+</body>
+</html>
